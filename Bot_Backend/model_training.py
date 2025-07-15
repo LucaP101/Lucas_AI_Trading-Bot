@@ -11,3 +11,4 @@ def train_model(df):
     model.fit(X_train, y_train)
     
     return model
+

@@ -1,19 +1,52 @@
-from alpaca_interface import get_price_data
-from data_handler import add_indicators
-from model_training import train_model
+print("🟢 Starting Luca's AI Trading Bot...")
 
-# Step 1: Get price data
-df = get_price_data()
+try:
+    from alpaca_interface import get_price_data
+    print("✅ Imported alpaca_interface")
+except Exception as e:
+    print("❌ Failed to import alpaca_interface:", e)
 
-# Step 2: Add indicators and prep data
-df = add_indicators(df)
+try:
+    from data_handler import add_indicators
+    print("✅ Imported data_handler")
+except Exception as e:
+    print("❌ Failed to import data_handler:", e)
 
-# Step 3: Train the AI model
-model = train_model(df)
+try:
+    from model_training import train_model
+    print("✅ Imported model_training")
+except Exception as e:
+    print("❌ Failed to import model_training:", e)
 
-# Step 4: Make a prediction on the most recent data row
-latest = df[['MA10', 'MA50', 'Return']].iloc[-1:]
-prediction = model.predict(latest)
+print("📥 Getting price data from Alpaca...")
+try:
+    df = get_price_data()
+    print("✅ Price data received.")
+except Exception as e:
+    print("❌ Error getting price data:", e)
+    exit()
 
-# Step 5: Print the result
-print("🔮 Prediction:", "BUY 📈" if prediction[0] == 1 else "HOLD/SELL 📉")
+print("📊 Adding indicators...")
+try:
+    df = add_indicators(df)
+    print("✅ Indicators added.")
+except Exception as e:
+    print("❌ Error adding indicators:", e)
+    exit()
+
+print("🧠 Training model...")
+try:
+    model = train_model(df)
+    print("✅ Model trained.")
+except Exception as e:
+    print("❌ Error training model:", e)
+    exit()
+
+print("🔮 Making prediction...")
+try:
+    latest = df[['MA10', 'MA50', 'Return']].iloc[-1:]
+    prediction = model.predict(latest)
+    result = "BUY 📈" if prediction[0] == 1 else "HOLD/SELL 📉"
+    print("📈 Prediction:", result)
+except Exception as e:
+    print("❌ Error making prediction:", e)

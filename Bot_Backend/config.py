@@ -3,4 +3,4 @@ ALPACA_SECRET_KEY = "RrMr9PkNfngxZ8OjxsEscDHDxzariaNjtevlyZI5"
 BASE_URL = "https://paper-api.alpaca.markets"
 
 STOCK_SYMBOL = "AAPL"
-TIMEFRAME = "day"  # could also be "minute"
+TIMEFRAME = "5min"  # could also be "minute"
