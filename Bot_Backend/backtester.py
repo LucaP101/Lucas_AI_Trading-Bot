@@ -1,39 +1,120 @@
-# 1. Import the necessary modules (pandas, your data handler, model trainer, etc.)
+import pandas as pd
 import data_handler
 import model_training
 import alpaca_interface
-import config
 
-# 2. Load historical price data (use your get_price_data() function or Alpaca API)
-alpaca_interface.get_price_data()
+def run_backtest(symbol, timeframe, num_days):
+    df = alpaca_interface.get_price_data(symbol, timeframe, num_days)
+    df = data_handler.add_indicators(df)
+    df = df.dropna().reset_index(drop=True)
 
-# 3. Add indicators using your add_indicators() function
-data_handler.add_indicators()
+    equity = 10000  # starting cash
+    balance_history = []
+    trades = []
 
-# 4. Create an empty list to store predictions, actual results, and profit
-predictions = []
-actual_results = []
-profit = []
-biggest_loss = []
+    for i in range(60, len(df)-1):
+        train_data = df.iloc[:i]
+        model = model_training.train_model(train_data)
 
-# 5. Loop through the data, starting at a certain index (e.g., 50 to give indicators time to form)
-for i in range(60, len(df)-1):
-    # a. Slice the data up to the current index (i.e., all previous days only)
-    
-    # b. Train your model on that slice
-    
-    # c. Use the most recent day (just before the prediction day) as the input
-    
-    # d. Predict what happens the next day (up or down)
+        features = df.iloc[i][['Return', 'MA10', 'RSI']].values.reshape(1, -1)
+        prediction = model.predict(features)[0]
 
-    # e. Compare prediction to actual result — was it correct?
+        today_close = df.iloc[i]['close']
+        tomorrow_close = df.iloc[i+1]['close']
+        date = df.iloc[i+1]['Date']
 
-    # f. If prediction was "buy", simulate buying and track the return from t to t+1
+        if prediction == 1:
+            pct_return = (tomorrow_close - today_close) / today_close
+            profit = equity * pct_return
+            equity += profit
 
-    # g. Log whether it was a win or loss, and how much was gained/lost
+            trades.append({
+                'Date': date,
+                'Buy_Price': today_close,
+                'Sell_Price': tomorrow_close,
+                'Pct_Return': pct_return,
+                'Profit': profit,
+                'Equity': equity
+            })
+        else:
+            trades.append({
+                'Date': date,
+                'Buy_Price': None,
+                'Sell_Price': None,
+                'Pct_Return': 0,
+                'Profit': 0,
+                'Equity': equity
+            })
 
-# 6. After the loop, calculate total return, win rate, number of trades, etc.
+        balance_history.append(equity)
 
-# 7. Print or return a summary of performance
+    df_results = pd.DataFrame(trades)
+    print(df_results.tail(10))
 
-# 8. (Optional later): Plot equity curve (account value over time)
+    total_return = (equity - 10000) / 10000
+    annualized_return = ((1 + total_return) ** (252 / len(trades))) - 1
+
+    print("\n✅ Backtest Summary:")
+    print(f"Total Return: {round(total_return * 100, 2)}%")
+    print(f"Annualized Return: {round(annualized_return * 100, 2)}%")
+    print(f"Final Equity: ${round(equity, 2)}")
+
+if __name__ == "__main__":
+    run_backtest("AAPL", "1Day", 1500)
+    df = alpaca_interface.get_price_data("AAPL", "1Day", 1500)
+    df = data_handler.add_indicators(df)
+    df = df.dropna().reset_index(drop=True)
+
+    equity = 10000  # starting cash
+    balance_history = []
+    trades = []
+
+    for i in range(60, len(df)-1):
+        train_data = df.iloc[:i]
+        model = model_training.train_model(train_data)
+
+        features = df.iloc[i][['Return', 'MA10', 'RSI']].values.reshape(1, -1)
+        prediction = model.predict(features)[0]
+
+        today_close = df.iloc[i]['close']
+        tomorrow_close = df.iloc[i+1]['close']
+        date = df.iloc[i+1]['Date']
+
+        if prediction == 1:
+            pct_return = (tomorrow_close - today_close) / today_close
+            profit = equity * pct_return
+            equity += profit
+
+            trades.append({
+                'Date': date,
+                'Buy_Price': today_close,
+                'Sell_Price': tomorrow_close,
+                'Pct_Return': pct_return,
+                'Profit': profit,
+                'Equity': equity
+            })
+        else:
+            trades.append({
+                'Date': date,
+                'Buy_Price': None,
+                'Sell_Price': None,
+                'Pct_Return': 0,
+                'Profit': 0,
+                'Equity': equity
+            })
+
+        balance_history.append(equity)
+
+    df_results = pd.DataFrame(trades)
+    print(df_results.tail(10))
+
+    total_return = (equity - 10000) / 10000
+    annualized_return = ((1 + total_return) ** (252 / len(trades))) - 1
+
+    print("\n✅ Backtest Summary:")
+    print(f"Total Return: {round(total_return * 100, 2)}%")
+    print(f"Annualized Return: {round(annualized_return * 100, 2)}%")
+    print(f"Final Equity: ${round(equity, 2)}")
+
+if __name__ == "__main__":
+    run_backtest()
