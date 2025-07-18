@@ -7,10 +7,11 @@ def run_backtest(symbol, timeframe, num_days):
     df = alpaca_interface.get_price_data(symbol, timeframe, num_days)
     df = data_handler.add_indicators(df)
     df = df.dropna().reset_index(drop=True)
+    print(f"📊 Final data size after indicators: {len(df)} rows")
 
-    equity = 10000  # starting cash
-    balance_history = []
+    equity = 10000
     trades = []
+    biggest_loss = 0
 
     for i in range(60, len(df)-1):
         train_data = df.iloc[:i]
@@ -19,102 +20,23 @@ def run_backtest(symbol, timeframe, num_days):
         features = df.iloc[i][['Return', 'MA10', 'RSI']].values.reshape(1, -1)
         prediction = model.predict(features)[0]
 
-        today_close = df.iloc[i]['close']
-        tomorrow_close = df.iloc[i+1]['close']
-        date = df.iloc[i+1]['Date']
-
         if prediction == 1:
-            pct_return = (tomorrow_close - today_close) / today_close
+            today = df.iloc[i]['close']
+            tomorrow = df.iloc[i+1]['close']
+            pct_return = (tomorrow - today) / today
             profit = equity * pct_return
             equity += profit
+            trades.append(profit)
 
-            trades.append({
-                'Date': date,
-                'Buy_Price': today_close,
-                'Sell_Price': tomorrow_close,
-                'Pct_Return': pct_return,
-                'Profit': profit,
-                'Equity': equity
-            })
-        else:
-            trades.append({
-                'Date': date,
-                'Buy_Price': None,
-                'Sell_Price': None,
-                'Pct_Return': 0,
-                'Profit': 0,
-                'Equity': equity
-            })
+            if profit < biggest_loss:
+                biggest_loss = profit
 
-        balance_history.append(equity)
-
-    df_results = pd.DataFrame(trades)
-    print(df_results.tail(10))
-
-    total_return = (equity - 10000) / 10000
-    annualized_return = ((1 + total_return) ** (252 / len(trades))) - 1
-
-    print("\n✅ Backtest Summary:")
-    print(f"Total Return: {round(total_return * 100, 2)}%")
-    print(f"Annualized Return: {round(annualized_return * 100, 2)}%")
-    print(f"Final Equity: ${round(equity, 2)}")
+    total_profit = equity - 10000
+    print("✅ Simple Backtest Results")
+    print(f"Days Tested: {len(df) - 60}")
+    print(f"Number of Trades: {len(trades)}")
+    print(f"Total Profit: ${round(total_profit, 2)}")
+    print(f"Biggest Single Loss: ${round(biggest_loss, 2)}")
 
 if __name__ == "__main__":
-    run_backtest("AAPL", "1Day", 1500)
-    df = alpaca_interface.get_price_data("AAPL", "1Day", 1500)
-    df = data_handler.add_indicators(df)
-    df = df.dropna().reset_index(drop=True)
-
-    equity = 10000  # starting cash
-    balance_history = []
-    trades = []
-
-    for i in range(60, len(df)-1):
-        train_data = df.iloc[:i]
-        model = model_training.train_model(train_data)
-
-        features = df.iloc[i][['Return', 'MA10', 'RSI']].values.reshape(1, -1)
-        prediction = model.predict(features)[0]
-
-        today_close = df.iloc[i]['close']
-        tomorrow_close = df.iloc[i+1]['close']
-        date = df.iloc[i+1]['Date']
-
-        if prediction == 1:
-            pct_return = (tomorrow_close - today_close) / today_close
-            profit = equity * pct_return
-            equity += profit
-
-            trades.append({
-                'Date': date,
-                'Buy_Price': today_close,
-                'Sell_Price': tomorrow_close,
-                'Pct_Return': pct_return,
-                'Profit': profit,
-                'Equity': equity
-            })
-        else:
-            trades.append({
-                'Date': date,
-                'Buy_Price': None,
-                'Sell_Price': None,
-                'Pct_Return': 0,
-                'Profit': 0,
-                'Equity': equity
-            })
-
-        balance_history.append(equity)
-
-    df_results = pd.DataFrame(trades)
-    print(df_results.tail(10))
-
-    total_return = (equity - 10000) / 10000
-    annualized_return = ((1 + total_return) ** (252 / len(trades))) - 1
-
-    print("\n✅ Backtest Summary:")
-    print(f"Total Return: {round(total_return * 100, 2)}%")
-    print(f"Annualized Return: {round(annualized_return * 100, 2)}%")
-    print(f"Final Equity: ${round(equity, 2)}")
-
-if __name__ == "__main__":
-    run_backtest()
+    run_backtest("AAPL", "1Day", 2000)
